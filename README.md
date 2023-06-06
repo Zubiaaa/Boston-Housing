@@ -14,36 +14,61 @@ Power BI
 Importing data using a Python script
 We go to the Home tab in the ribbon and click Get data and choose the More option to start our data import. Go to the Other pane where you should find the Python script option. Select that and click Connect. A Python script dialog opens where you can add your own code. Copy and paste the below code to the Script text area and click OK:
 import pandas as pd
+
 import numpy as np
+
 from sklearn.datasets import load_boston
+
 from sklearn.preprocessing import StandardScaler
+
 from sklearn.decomposition import PCA
+
 from sklearn.cluster import KMeans# utilize the sklearn.datasets package to load the Boston Housing dataset
+
 boston = load_boston()# scale the data to same value range first since PCA
-# is sensitive to the scaling of data
+
+#is sensitive to the scaling of data
+
 sc = StandardScaler()
+
 X = sc.fit_transform(boston.data)# create PCA with n_components=2 to allow visualization in 2 dimensions
+
 pca = PCA(n_components=2)
+
 X_pca = pca.fit_transform(X)# divide data into 5 clusters (refer to .ipynb for motivation)
+
 kmeans = KMeans(n_clusters=5, init='k-means++', max_iter=300, n_init=10)
+
 y_kmeans = kmeans.fit_predict(X_pca)# create pandas dataframe of the housing data for Power BI
+
 columns = np.append(boston.feature_names, ['MEDV', 'PC1', 'PC2', 'CLUSTER'])
+
 data = np.concatenate((boston.data,
                        boston.target.reshape(-1, 1),
                        X_pca,
                        y_kmeans.reshape(-1, 1)),
                       axis=1)
+                      
 df_housing = pd.DataFrame(data=data, columns=columns)
+
 #we need to convert all columns as string because of different
+
 #decimal separator in Python (.) and Finnish locale (,) that Power BI uses.
+
 #comment out below line if Power BI uses dot as a decimal separator.
+
 df_housing = df_housing.astype('str')# create pandas dataframe of the pca data for Power BI
+
 columns = np.append(boston.feature_names, ['VARRATIO'])
+
 data = np.concatenate((pca.components_,
                        pca.explained_variance_ratio_.reshape(-1, 1)),
                       axis=1)
+                      
 df_pca = pd.DataFrame(data=data, columns=columns, index=['PC1', 'PC2'])
+
 df_pca = df_pca.astype('str')
+
 In the next window we are able to choose which datasets to import. Select both the df_housing as well as the df_pca datasets and click Load. Next we will go and make the final adjustments to our import data. Click Edit Queries in the ribbon.
 The next target is to convert every column to numbers.
 Power BI with decimal point
@@ -59,30 +84,41 @@ You might have a different cluster order (coloring) due to the random selection 
 Next we will visualize how each feature affects each of the principal components. This information is available in the df_pca dataset. We will show this information through a heatmap. The Seaborn Python library provides an easy way to create a heatmap so we'll add a Python visual to the page. Power BI might warn you about script visuals, click Enable to continue. Each feature needs to be separately dragged to the Data fields area. Drag each column from the dataset except VARRATIO. Copy the following code snippet to the code area and click Run script:
 
 import matplotlib.pyplot as plt
+
 import seaborn as snsdataset.index = ['PC1', 'PC2']
+
 plt.figure(figsize=(8, 2))
+
 plt.xticks(rotation=45)
+
 data = dataset.loc['PC1', :].to_frame().sort_values(by='PC1').transpose()
+
 sns.heatmap(data,
             cmap='plasma',
             square=True,
             annot=True,
             cbar=False,
             yticklabels='')
+            
 plt.show()
 You should now see a heatmap. Depending on your screen resolution you might have to hide the script pane to see the visual.
 Repeat the same step to create a heatmap for the second principal component but use below code snippet instead to use the data from the second principal component and make a vertical visualization that can be placed on the left side of the scatter plot:
 
 import matplotlib.pyplot as plt
+
 import seaborn as snsdataset.index = ['PC1', 'PC2']
+
 plt.figure(figsize=(2, 8))
+
 data = dataset.loc['PC2', :].to_frame().sort_values(by='PC2', ascending=False)
+
 sns.heatmap(data,
             cmap='plasma',
             square=True,
             annot=True,
             cbar=False,
             xticklabels='')
+            
 plt.show()
 We have now visualized the identified clusters of data with regards to the two principal components that together explain the majority of the variance in the data. The heat maps display which features affects each principal component in a positive or negative manner with regards to the principal component value. Let’s make some final touches to make the report look a little nicer:
 •	Change one of the gray cluster colors to purple.
